@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>📊 Test Summary</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        background: linear-gradient(120deg, #0a0e31, #1b1f3b);
+        color: white;
+        font-family: "Poppins", sans-serif;
+        padding: 2rem;
+      }
+      .box {
+        max-width: 600px;
+        margin: auto;
+        background: #10152e;
+        padding: 2rem;
+        border-radius: 12px;
+        text-align: center;
+        box-shadow: 0 0 15px rgba(0, 255, 171, 0.2);
+      }
+      h2 {
+        color: #00ffab;
+        margin-bottom: 1rem;
+      }
+      p {
+        margin: 0.6rem 0;
+        font-size: 1rem;
+      }
+      strong {
+        color: #00e29d;
+      }
+      button {
+        margin-top: 2rem;
+        padding: 0.9rem 2.2rem;
+        background: #00ffab;
+        color: #0a0e31;
+        border: none;
+        border-radius: 8px;
+        font-weight: bold;
+        cursor: pointer;
+        font-size: 1rem;
+        transition: background 0.3s ease;
+      }
+      button:hover {
+        background: #00e29d;
+      }
+      @media (max-width: 500px) {
+        .box {
+          padding: 1.5rem;
+        }
+        p {
+          font-size: 0.95rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="box">
+      <h2>✅ Test Summary</h2>
+      <p><strong>Name:</strong> <span id="name">Loading...</span></p>
+      <p><strong>Email:</strong> <span id="email">Loading...</span></p>
+      <p><strong>Subject:</strong> <span id="subject">Loading...</span></p>
+      <p><strong>Trial:</strong> <span id="trialNum">Loading...</span></p>
+      <p><strong>Questions Answered:</strong> <span id="answered">-</span></p>
+      <p><strong>Unanswered:</strong> <span id="unanswered">-</span></p>
+      <p><strong>Score:</strong> <span id="score">-</span></p>
+      <p><strong>Percentage:</strong> <span id="percent">-</span></p>
+      <p><strong>Time Spent:</strong> <span id="time">-</span></p>
+      <button id="doneBtn">🏁 Done</button>
+      <p id="redirectMsg" style="margin-top:1.2rem; color:#bbb;">⏳ Redirecting in 10 seconds...</p>
+    </div>
+
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+      import {
+        getFirestore,
+        getDocs,
+        collection,
+      } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+      import {
+        getAuth,
+        onAuthStateChanged,
+      } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyBh6GRLRszF1QKjfJJ8kQBmGgEN-vIVcEI",
+        authDomain: "cbt-011.firebaseapp.com",
+        projectId: "cbt-011",
+        storageBucket: "cbt-011.firebasestorage.app",
+        messagingSenderId: "815014590557",
+        appId: "1:815014590557:web:4e4f9da158d6a9908475b4",
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore(app);
+      const auth = getAuth(app);
+
+      const trial = new URLSearchParams(location.search).get("trial") || "1";
+
+      const trialPrefix = `cbt_`; // Key prefix
+
+      const answers =
+        JSON.parse(localStorage.getItem(`${trialPrefix}answers_${trial}`)) ||
+        {};
+      const score = parseInt(
+        localStorage.getItem(`${trialPrefix}score_${trial}`) || "0"
+      );
+      const total = parseInt(
+        localStorage.getItem(`${trialPrefix}total_${trial}`) || "40"
+      );
+      const time = parseInt(
+        localStorage.getItem(`${trialPrefix}timeSpent_${trial}`) || "0"
+      );
+
+      const answeredCount = Object.keys(answers).length;
+      const unansweredCount = total - answeredCount;
+      const percentage = ((score / total) * 100).toFixed(2);
+
+      document.getElementById("trialNum").textContent = `Trial ${trial}`;
+      document.getElementById("answered").textContent = answeredCount;
+      document.getElementById("unanswered").textContent = unansweredCount;
+      document.getElementById("score").textContent = score;
+      document.getElementById("percent").textContent = percentage + "%";
+      document.getElementById("time").textContent = `${Math.floor(
+        time / 60
+      )}m ${time % 60}s`;
+
+      onAuthStateChanged(auth, async (user) => {
+        if (user) {
+          const snap = await getDocs(collection(db, "users"));
+          const doc = snap.docs.find((d) => d.id === user.uid);
+          if (doc) {
+            const data = doc.data();
+            document.getElementById("name").textContent =
+              data.name || "Unknown";
+            document.getElementById("email").textContent = user.email;
+            document.getElementById("subject").textContent =
+              data.subject?.toUpperCase() || "N/A";
+          }
+        } else {
+          window.location.href = "index.html";
+        }
+      });
+
+      const doneBtn = document.getElementById("doneBtn");
+
+      doneBtn.onclick = () => {
+        redirectToNext();
+      };
+
+      // Auto redirect after 10 seconds
+      setTimeout(() => {
+        redirectToNext();
+      }, 10000); // 10 seconds
+
+      function redirectToNext() {
+        if (trial === "2") {
+          window.location.href = "congratulations.html";
+        } else {
+          window.location.href = "home.html";
+        }
+      }
+    </script>
+  </body>
+</html>

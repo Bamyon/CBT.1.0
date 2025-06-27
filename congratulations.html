@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>🎉 Congratulations!</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;700&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      margin: 0;
+      background: linear-gradient(to right, #0f0c29, #302b63, #24243e);
+      font-family: 'Poppins', sans-serif;
+      color: #ffffff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      text-align: center;
+    }
+
+    .container {
+      max-width: 500px;
+      padding: 2rem;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 16px;
+      box-shadow: 0 0 20px rgba(0, 255, 171, 0.2);
+      backdrop-filter: blur(8px);
+      animation: fadeIn 1.5s ease-in-out;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      color: #00ffab;
+    }
+
+    p {
+      font-size: 1.2rem;
+      color: #ffcc70;
+    }
+
+    .emoji {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+      animation: bounce 1.8s infinite;
+    }
+
+    button {
+      margin-top: 2rem;
+      padding: 1rem 2rem;
+      font-size: 1.1rem;
+      background: #00ffab;
+      color: #0a0e31;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #00e2a2;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-12px); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="emoji">🎓</div>
+    <h1>Congratulations!</h1>
+    <p>You have successfully completed all <strong>2 Trials</strong>.</p>
+    <p>We appreciate your participation in the CBT.</p>
+    <button id="logoutBtn">🔒 Logout Now</button>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, getDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBh6GRLRszF1QKjfJJ8kQBmGgEN-vIVcEI",
+      authDomain: "cbt-011.firebaseapp.com",
+      projectId: "cbt-011",
+      storageBucket: "cbt-011.firebasestorage.app",
+      messagingSenderId: "815014590557",
+      appId: "1:815014590557:web:4e4f9da158d6a9908475b4"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Ensure only logged in users can access this page
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "index.html";
+        return;
+      }
+
+      const userRef = doc(db, "users", user.uid);
+      const snap = await getDoc(userRef);
+
+      if (snap.exists()) {
+        const data = snap.data();
+        const trial1 = typeof data.trial1Score === "number";
+        const trial2 = typeof data.trial2Score === "number";
+
+        if (!(trial1 && trial2)) {
+          // Redirect back if user hasn't completed 2 trials
+          window.location.href = "dashboard.html";
+        }
+      } else {
+        signOut(auth).then(() => window.location.href = "index.html");
+      }
+    });
+
+    // Logout manually
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      localStorage.clear();
+      signOut(auth).then(() => {
+        window.location.href = "index.html";
+      });
+    });
+  </script>
+</body>
+</html>

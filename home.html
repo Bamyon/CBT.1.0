@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>📘 CBT Instructions</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+      import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+      import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyBh6GRLRszF1QKjfJJ8kQBmGgEN-vIVcEI",
+        authDomain: "cbt-011.firebaseapp.com",
+        projectId: "cbt-011",
+        storageBucket: "cbt-011.firebasestorage.app",
+        messagingSenderId: "815014590557",
+        appId: "1:815014590557:web:4e4f9da158d6a9908475b4",
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      const db = getFirestore(app);
+
+      window.addEventListener("DOMContentLoaded", () => {
+        const nameDisplay = document.getElementById("username");
+        const emailDisplay = document.getElementById("email");
+        const subjectDisplay = document.getElementById("subject");
+        const trialInfo = document.getElementById("trialStatus");
+        const startBtn = document.getElementById("startBtn");
+        const warning = document.getElementById("warning");
+
+        onAuthStateChanged(auth, async (user) => {
+          if (!user) {
+            window.location.href = "login.html";
+            return;
+          }
+
+          const uid = user.uid;
+          const userDoc = await getDoc(doc(db, "users", uid));
+
+          if (!userDoc.exists()) {
+            warning.textContent = "❌ Unauthorized user.";
+            return;
+          }
+
+          const data = userDoc.data();
+          nameDisplay.textContent = data.name || "Unknown User";
+          emailDisplay.textContent = data.email || user.email;
+          subjectDisplay.textContent = data.subject ? data.subject.toUpperCase() : "Not Assigned";
+
+          const trial1Done = !!data.trial1;
+          const trial2Done = !!data.trial2;
+
+          if (trial1Done && trial2Done) {
+            warning.textContent = "✅ You've completed both trials.";
+            startBtn.style.display = "none";
+            trialInfo.innerHTML = "🚫 Trials left: <strong>0</strong>";
+          } else {
+            const nextTrial = !trial1Done ? 1 : 2;
+            trialInfo.innerHTML = `🎯 Trials left: <strong>${trial1Done ? 1 : 2}</strong>`;
+            startBtn.textContent = `Start Trial ${nextTrial}`;
+            startBtn.onclick = () => {
+              window.location.href = `quiz.html?trial=${nextTrial}`;
+            };
+          }
+        });
+      });
+    </script>
+
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background: linear-gradient(120deg, #0a0e31, #1b1f3b);
+        font-family: "Poppins", sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        color: #fff;
+      }
+
+      .container {
+        max-width: 600px;
+        width: 90%;
+        padding: 2rem;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+        box-shadow: 0 0 20px rgba(0, 255, 171, 0.2);
+        backdrop-filter: blur(10px);
+      }
+
+      h2 {
+        text-align: center;
+        color: #00ffab;
+      }
+
+      .info {
+        margin-bottom: 1rem;
+        font-size: 1.05rem;
+      }
+
+      .instructions {
+        background-color: rgba(255, 255, 255, 0.06);
+        border-left: 5px solid #00ffab;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        line-height: 1.6;
+        border-radius: 8px;
+      }
+
+      button {
+        display: block;
+        width: 100%;
+        padding: 0.9rem;
+        font-size: 1.1rem;
+        background: #00ffab;
+        color: #0a0e31;
+        font-weight: bold;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        box-shadow: 0 0 10px #00ffab;
+        transition: transform 0.2s ease, background 0.3s ease;
+      }
+
+      button:hover {
+        background: #00e29d;
+        transform: scale(1.02);
+      }
+
+      #warning {
+        color: #ffca28;
+        text-align: center;
+        margin-top: 1rem;
+      }
+
+      @media (max-width: 500px) {
+        .container {
+          padding: 1.5rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>📝 CBT Instructions</h2>
+
+      <div class="info"><strong>Name:</strong> <span id="username">Loading...</span></div>
+      <div class="info"><strong>Email:</strong> <span id="email">Loading...</span></div>
+      <div class="info"><strong>Subject:</strong> <span id="subject">Loading...</span></div>
+      <div class="info" id="trialStatus">Checking trials...</div>
+
+      <div class="instructions">
+        <p>🔸 You are to attempt <strong>40 questions</strong> in <strong>25 minutes</strong>.</p>
+        <p>🔸 You have only <strong>2 trials</strong> — Trial 1 and Trial 2.</p>
+        <p>🔸 Once submitted, you cannot retake the same trial.</p>
+        <p>🔸 Make sure to click the <strong>“Submit”</strong> button at the end.</p>
+      </div>
+
+      <button id="startBtn">Start Trial</button>
+      <p id="warning"></p>
+    </div>
+  </body>
+</html>

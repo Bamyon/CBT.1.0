@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>CBT Login - Bamyon</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Google Font -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Firebase SDK -->
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+      import {
+        getAuth,
+        signInWithEmailAndPassword,
+      } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+      import {
+        getFirestore,
+        doc,
+        getDoc,
+      } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyBh6GRLRszF1QKjfJJ8kQBmGgEN-vIVcEI",
+        authDomain: "cbt-011.firebaseapp.com",
+        projectId: "cbt-011",
+        storageBucket: "cbt-011.firebasestorage.app",
+        messagingSenderId: "815014590557",
+        appId: "1:815014590557:web:4e4f9da158d6a9908475b4",
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      const db = getFirestore(app);
+
+      document.addEventListener("DOMContentLoaded", () => {
+        const form = document.getElementById("loginForm");
+        const status = document.getElementById("status");
+
+        form.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const email = form.email.value.trim();
+          const password = form.password.value.trim();
+
+          status.textContent = "⏳ Logging in...";
+
+          try {
+            const userCredential = await signInWithEmailAndPassword(
+              auth,
+              email,
+              password
+            );
+            const uid = userCredential.user.uid;
+
+            const userRef = doc(db, "users", uid);
+            const userSnap = await getDoc(userRef);
+
+            if (!userSnap.exists()) {
+              status.textContent = "❌ Unauthorized user.";
+              return;
+            }
+
+            const userData = userSnap.data();
+
+            if (userData.submitted === true) {
+              status.textContent = "⚠️ You have already submitted your test.";
+              return;
+            }
+
+            // ✅ Logged in, redirect to instructions
+            status.textContent = "✅ Login successful! Redirecting...";
+            setTimeout(() => {
+              window.location.href = "home.html"; // Replace with your actual page
+            }, 1200);
+          } catch (error) {
+            status.textContent = "❌ Login failed. Check credentials.";
+          }
+        });
+      });
+    </script>
+
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: "Poppins", sans-serif;
+        background: linear-gradient(120deg, #0a0e31, #1b1f3b);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .container {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(15px);
+        padding: 2rem;
+        width: 95%;
+        max-width: 420px;
+        border-radius: 16px;
+        box-shadow: 0 0 20px rgba(0, 255, 171, 0.3);
+      }
+
+      h2 {
+        text-align: center;
+        color: #00ffab;
+        margin-bottom: 1.5rem;
+      }
+
+      form input {
+        width: 100%;
+        padding: 0.75rem;
+        margin-bottom: 1rem;
+        border: 1px solid #00ffab;
+        border-radius: 10px;
+        background-color: #10152e;
+        color: white;
+        font-size: 1rem;
+        transition: border-color 0.3s ease;
+      }
+
+      form input:focus {
+        outline: none;
+        border-color: #00bfff;
+        box-shadow: 0 0 8px #00bfff99;
+      }
+
+      button {
+        width: 100%;
+        padding: 0.9rem;
+        font-size: 1rem;
+        font-weight: bold;
+        color: #0a0e31;
+        background: #00ffab;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: background 0.3s ease, transform 0.2s ease;
+        box-shadow: 0 0 15px #00ffab;
+      }
+
+      button:hover {
+        background: #00e2a0;
+        transform: scale(1.02);
+      }
+
+      #status {
+        margin-top: 1rem;
+        color: #ffca28;
+        text-align: center;
+        font-size: 0.95rem;
+      }
+
+      @media (max-width: 500px) {
+        .container {
+          padding: 1.5rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>👨‍💻 Bamyon CBT-Login</h2>
+
+      <form id="loginForm">
+        <input type="email" name="email" placeholder="Email Address" required />
+        <input
+          type="password"
+          name="password"
+          placeholder="Password"
+          required
+        />
+        <button type="submit">🔓 Login</button>
+      </form>
+
+      <p id="status"></p>
+    </div>
+  </body>
+</html>

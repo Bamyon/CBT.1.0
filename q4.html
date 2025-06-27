@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>🧠 CBT Quiz</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        margin: 0;
+        font-family: Poppins, sans-serif;
+        background: linear-gradient(120deg, #0a0e31, #1b1f3b);
+        color: white;
+      }
+      .container {
+        max-width: 960px;
+        margin: auto;
+        padding: 2rem;
+      }
+      h2 {
+        text-align: center;
+        color: #00ffab;
+      }
+      #timer {
+        text-align: center;
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+      }
+      #questions {
+        margin-top: 1.5rem;
+      }
+      .question-block {
+        margin-bottom: 1.5rem;
+        background: rgba(255, 255, 255, 0.06);
+        padding: 1rem;
+        border-radius: 10px;
+      }
+      .options label {
+        display: block;
+        padding: 0.5rem;
+        margin-top: 0.3rem;
+        background: #10152e;
+        border-radius: 8px;
+        cursor: pointer;
+        border: 1px solid transparent;
+      }
+      .options input {
+        margin-right: 0.5rem;
+      }
+      .trackers {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 1rem 0;
+        justify-content: center;
+      }
+      .tracker-box {
+        width: 36px;
+        height: 36px;
+        line-height: 36px;
+        text-align: center;
+        background: #ff4444;
+        color: white;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: bold;
+      }
+      .tracker-box.answered {
+        background: #00ffab;
+        color: #0a0e31;
+      }
+      .nav-buttons {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 1.5rem;
+      }
+      button {
+        padding: 1rem;
+        font-size: 1rem;
+        font-weight: bold;
+        background: #00ffab;
+        color: #0a0e31;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+      button:hover {
+        background: #00e29d;
+        transform: scale(1.02);
+      }
+      /* Confirmation Modal */
+      #confirmModal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        display: none;
+        justify-content: center;
+        align-items: center;
+      }
+      #confirmModal .box {
+        background: #10152e;
+        padding: 2rem;
+        border-radius: 10px;
+        text-align: center;
+      }
+      #confirmModal button {
+        margin: 0 0.5rem;
+        width: 120px;
+      }
+      #submitBtn{
+        margin-top: 20px;
+        text-align: center;
+      }
+
+      @media (max-width: 600px) {
+        .nav-buttons {
+          flex-direction: column;
+          gap: 10px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>🧠 Computer-Based Test</h2>
+      <div id="timer">⏱️ Loading timer...</div>
+      <div class="trackers" id="trackers"></div>
+      <div id="questions"></div>
+      <div class="nav-buttons">
+        <button id="prevBtn">⬅️ Previous</button>
+        <button id="nextBtn">Next ➡️</button>
+      </div>
+      <button id="submitBtn">🚀 Submit Test</button>
+    </div>
+
+    <div id="confirmModal">
+      <div class="box">
+        <p>➕ Are you sure you want to submit?</p>
+        <button id="confirmYes">Yes, submit</button>
+        <button id="confirmNo">No, go back</button>
+      </div>
+    </div>
+
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+      import {
+        getFirestore,
+        collection,
+        getDocs,
+        doc,
+        updateDoc,
+      } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+      import {
+        getAuth,
+        onAuthStateChanged,
+      } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyBh6GRLRszF1QKjfJJ8kQBmGgEN-vIVcEI",
+        authDomain: "cbt-011.firebaseapp.com",
+        projectId: "cbt-011",
+        storageBucket: "cbt-011.firebasestorage.app",
+        messagingSenderId: "815014590557",
+        appId: "1:815014590557:web:4e4f9da158d6a9908475b4",
+      };
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore(app);
+      const auth = getAuth(app);
+
+      const trial =
+        new URLSearchParams(window.location.search).get("trial") || "1";
+      const perPage = 10;
+      let currentPage = 0;
+      let questions = [];
+      let answers = JSON.parse(
+        localStorage.getItem(`cbt_answers_${trial}`) || "{}"
+      );
+      let startTime = Date.now();
+
+      const timer = document.getElementById("timer"),
+        trackers = document.getElementById("trackers"),
+        questionsEl = document.getElementById("questions"),
+        prevBtn = document.getElementById("prevBtn"),
+        nextBtn = document.getElementById("nextBtn"),
+        submitBtn = document.getElementById("submitBtn"),
+        modal = document.getElementById("confirmModal"),
+        confirmYes = document.getElementById("confirmYes"),
+        confirmNo = document.getElementById("confirmNo");
+
+      function getRandom(arr, n) {
+        return arr.sort(() => 0.5 - Math.random()).slice(0, n);
+      }
+
+      function renderPage() {
+        questionsEl.innerHTML = "";
+        const start = currentPage * perPage;
+        questions.slice(start, start + perPage).forEach((q, idx) => {
+          const i = start + idx;
+          const div = document.createElement("div");
+          div.className = "question-block";
+          div.innerHTML = `
+          <p><strong>Q${i + 1}:</strong> ${q.text}</p>
+          <div class="options">
+            ${q.options
+              .map(
+                (opt) =>
+                  `<label><input type="radio" name="q${i}" value="${opt}" ${
+                    answers[i] === opt ? "checked" : ""
+                  }/> ${opt}</label>`
+              )
+              .join("")}
+          </div>`;
+          questionsEl.appendChild(div);
+        });
+
+        document
+          .querySelectorAll(".options input[type=radio]")
+          .forEach((el) => {
+            el.addEventListener("change", () => {
+              answers[parseInt(el.name.slice(1))] = el.value;
+              localStorage.setItem(
+                `cbt_answers_${trial}`,
+                JSON.stringify(answers)
+              );
+              updateTrackers();
+            });
+          });
+
+        prevBtn.style.visibility = currentPage === 0 ? "hidden" : "visible";
+        nextBtn.style.visibility =
+          currentPage >= questions.length / perPage - 1 ? "hidden" : "visible";
+        updateTrackers();
+      }
+
+      function buildTrackers() {
+        trackers.innerHTML = "";
+        questions.forEach((_, i) => {
+          const box = document.createElement("div");
+          box.className = "tracker-box";
+          box.textContent = i + 1;
+          box.onclick = () => {
+            currentPage = Math.floor(i / perPage);
+            renderPage();
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          };
+          trackers.appendChild(box);
+        });
+        updateTrackers();
+      }
+
+      function updateTrackers() {
+        document.querySelectorAll(".tracker-box").forEach((b, i) => {
+          b.classList.toggle("answered", answers[i] !== undefined);
+        });
+      }
+
+      function startTimer(seconds) {
+        let t = seconds;
+        const interval = setInterval(() => {
+          const m = Math.floor(t / 60),
+            s = t % 60;
+          timer.textContent = `⏳ Time Left: ${m}:${s < 10 ? "0" + s : s}`;
+          if (--t < 0) {
+            clearInterval(interval);
+            submitBtn.click();
+          }
+        }, 1000);
+      }
+
+      prevBtn.onclick = () => {
+        if (currentPage > 0) {
+          currentPage--;
+          renderPage();
+        }
+      };
+      nextBtn.onclick = () => {
+        if ((currentPage + 1) * perPage < questions.length) {
+          currentPage++;
+          renderPage();
+        }
+      };
+
+      submitBtn.onclick = () => (modal.style.display = "flex");
+      confirmNo.onclick = () => (modal.style.display = "none");
+
+      confirmYes.onclick = async () => {
+        modal.style.display = "none";
+        const score = questions.reduce(
+          (sum, q, i) => sum + (answers[i] === q.answer ? 1 : 0),
+          0
+        );
+        const timeSpent = Math.floor((Date.now() - startTime) / 1000);
+        const user = auth.currentUser;
+        if (user) {
+          const snap = await getDocs(collection(db, "users"));
+          const docSnap = snap.docs.find((d) => d.id === user.uid);
+          if (docSnap) {
+            const ref = doc(db, "users", user.uid);
+            const payload = {
+              [`trial${trial}Score`]: score,
+              [`trial${trial}Time`]: timeSpent,
+            };
+            if (trial === "2") payload.submitted = true;
+            await updateDoc(ref, payload);
+          }
+        }
+
+        localStorage.setItem(`cbt_score_${trial}`, score);
+        localStorage.setItem(`cbt_timeSpent_${trial}`, timeSpent);
+        localStorage.setItem(`cbt_total_${trial}`, questions.length);
+
+        window.location.href = `results.html?trial=${trial}`;
+      };
+
+      onAuthStateChanged(auth, async (user) => {
+        if (!user) return (window.location.href = "index.html");
+        const usersSnap = await getDocs(collection(db, "users"));
+        const me = usersSnap.docs.find((d) => d.id === user.uid)?.data();
+        const subj = (me?.subject || "physics").toLowerCase();
+        const qdocs = await getDocs(collection(db, `questions_${subj}`));
+        questions = getRandom(
+          qdocs.docs.map((d) => d.data()),
+          40
+        );
+        buildTrackers();
+        renderPage();
+        startTimer(25 * 60);
+      });
+    </script>
+  </body>
+</html>
